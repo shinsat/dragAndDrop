@@ -16,7 +16,7 @@ class GridManager:
         #self.grid_layout.setContentsMargins(0,0,0,0)
 
         self.current_list = {}
-        self.first = True
+        self.first = False
 
     def choosing_position(self, wgt, row, column):
         self.tmp_list = self.current_list.copy()
@@ -233,7 +233,7 @@ class Form(QDialog):
         #myWidget.bodybox.addWidget(QPushButton('1,0'), 1, 0)
         #myWidget.bodybox.addWidget(QPushButton('1,1'), 1, 1)
 
-        myWidget.grid.add_widget(QPushButton('0,0'), 0, 0)
+        #myWidget.grid.add_widget(QPushButton('0,0'), 0, 0)
         #myWidget.grid.add_widget(QPushButton('0,1'), 0, 1)
         #myWidget.grid.add_widget(QPushButton('1,0'), 1, 0)
         #myWidget.grid.add_widget(QPushButton('1,1'), 1, 1)
