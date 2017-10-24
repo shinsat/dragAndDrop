@@ -1,43 +1,77 @@
-#!/usr/bin/env python
-# Copyright (c) 2007-8 Qtrac Ltd. All rights reserved.
-# This program or module is free software: you can redistribute it and/or
-# modify it under the terms of the GNU General Public License as published
-# by the Free Software Foundation, either version 2 of the License, or
-# version 3 of the License, or (at your option) any later version. It is
-# provided for educational purposes and is distributed in the hope that
-# it will be useful, but WITHOUT ANY WARRANTY; without even the implied
-# warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See
-# the GNU General Public License for more details.
+
 
 import os
 import sys
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-
+import copy
 
 class GridManager:
     def __init__(self):
-        self.widget_list = []   # [row, column] = wgt
+        self.widget_list = {}   # [row, column] = wgt
         self.grid_layout = QGridLayout()
-        self.grid_layout.setSpacing(0)
-        self.grid_layout.setHorizontalSpacing(0)
-        self.grid_layout.setContentsMargins(0,0,0,0)
+        #self.grid_layout.setSpacing(0)
+        #self.grid_layout.setHorizontalSpacing(0)
+        #self.grid_layout.setContentsMargins(0,0,0,0)
 
+        self.current_list = {}
+        self.first = True
+
+    def choosing_position(self, wgt, row, column):
+        self.tmp_list = self.current_list.copy()
+        if (row, column) in self.widget_list:
+            print('occupied')
+            self.tmp_list[max([r[0] for r in self.widget_list.keys()]), column] = wgt
+        else:
+            self.tmp_list[row, column] = wgt
+
+            #self.grid_layout.addWidget(wgt, row, column)
+
+        self.update_grid(self.current_list, self.tmp_list)
+        self.current_list = self.tmp_list.copy()
 
     def add_widget(self, wgt, row, column):
+        if not self.first:
+            for row, column in self.current_list.keys():
+                if isinstance(self.current_list[row, column], QLabel):
+                    self.current_list[row, column].hide()
+                    self.current_list.pop(row, column)
+                    self.grid_layout.removeWidget(self.current_list[row, column])
+                    self.grid_layout.addWidget(wgt, row, column)    # replace 'here' ガイド用のダミーウィジェットのみを正規ものへ置き換えするだけ
+
+            return
+        self.first = False
+
         c = r = 0
-        self.widget_list.append([wgt, row, column])
-        self.grid_layout.addWidget(wgt, row, column)
+        if (row, column) in self.widget_list:
+            print('occupied')
+            #self.current_list = self.widget_list.copy
+            self.widget_list[row +1, column] = wgt
+            self.grid_layout.addWidget(wgt, row, column)
+        else:
+            self.widget_list[row, column] = wgt
+            self.grid_layout.addWidget(wgt, row +1, column)
+            #self.grid_layout.addWidget(wgt, row, column)
 
     def remove_widget(self, row, column):
         for i, w, r, c in enumerate(self.widget_list):
             del self.widget_list[i]
             w.deleteLater()
 
-    def update_grid(self):
-         pass
+    def update_grid(self, current_list, new_list):
+        for w in current_list.values():
+            w.hide()
+            self.grid_layout.removeWidget(w)
 
+        for pos in new_list.keys():
+            print('positioning at ', pos[0],',', pos[1])
+            self.grid_layout.addWidget(new_list[pos], pos[0], pos[1])
+            new_list[pos].show()
+
+
+    def capture_current_list(self):
+        self.current_list = self.widget_list
 
 
 class MyWidget(QWidget):
@@ -46,8 +80,8 @@ class MyWidget(QWidget):
         self.setAcceptDrops(True)
         #self.setMouseTracking(True)
         self.topbox = QVBoxLayout()
-        self.title = QLabel('custom widget')
-        self.topbox.addWidget(self.title)
+        #self.title = QLabel('custom widget')
+        #self.topbox.addWidget(self.title)
 
         self.grid = GridManager()    #QGridLayout()
 
@@ -63,6 +97,10 @@ class MyWidget(QWidget):
 
         self.dragging = False
         self.dragging_position = QPoint()
+        self.rowX = self.columnX = 0
+
+        self.dummyWgt = QLabel('here?')
+
 
     def dragEnterEvent(self, e):
         if e.mimeData().hasFormat('text/plain'):
@@ -73,6 +111,8 @@ class MyWidget(QWidget):
             self.current_width = self.width()
 
             self.dragging = True
+
+            self.grid.capture_current_list()
 
         else:
             e.ignore()
@@ -86,6 +126,7 @@ class MyWidget(QWidget):
 #        position = self.get_nearest_position(e.pos())
 #        print('add at (', position[0], ',', position[1], ')')
 #        self.bodybox.addWidget(QPushButton(e.mimeData().text()), position[0], position[1])
+        self.dragging = False
         if e.mimeData().hasFormat('text/plain'):
             new_pos = self.get_nearest_position(self.dragging_position)
             self.grid.add_widget(QPushButton(e.mimeData().text()), new_pos[0], new_pos[1])
@@ -102,9 +143,22 @@ class MyWidget(QWidget):
     def dragMoveEvent(self, event):
         self.dragging_position = event.pos()
         position = self.get_nearest_position(event.pos())
-        print('(', position[0], ',', position[1], ')')
+        print('at (', position[0], ',', position[1], ')')
+        if self.rowX == position[0] and self.columnY == position[1]:
+            return
+        # update values
+        self.rowX = position[0]
+        self.columnY = position[1]
+        self.dragging = True
+        self.grid.choosing_position(self.dummyWgt, position[0], position[1])
 
     def get_nearest_position(self, drop_pos):
+        '''
+        unit_w = max([r[1] for r in self.grid.widget_list.keys()])
+        width_unit = self.current_width if unit_w == 0 else int(self.current_width / unit_w)
+        unit_h = max([r[0] for r in self.grid.widget_list.keys()])
+        height_unit = self.current_height if unit_h == 0 else int(self.current_height / unit_h)
+        '''
         width_unit = int(self.current_width / self.current_columns)
         height_unit = int(self.current_height / self.current_rows)
 
@@ -180,9 +234,9 @@ class Form(QDialog):
         #myWidget.bodybox.addWidget(QPushButton('1,1'), 1, 1)
 
         myWidget.grid.add_widget(QPushButton('0,0'), 0, 0)
-        myWidget.grid.add_widget(QPushButton('0,1'), 0, 1)
-        myWidget.grid.add_widget(QPushButton('1,0'), 1, 0)
-        myWidget.grid.add_widget(QPushButton('1,1'), 1, 1)
+        #myWidget.grid.add_widget(QPushButton('0,1'), 0, 1)
+        #myWidget.grid.add_widget(QPushButton('1,0'), 1, 0)
+        #myWidget.grid.add_widget(QPushButton('1,1'), 1, 1)
 
         editBox = QLineEdit('Drag this', self)
         editBox.setDragEnabled(True)
