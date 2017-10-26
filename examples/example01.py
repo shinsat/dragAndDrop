@@ -1,7 +1,7 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QLineEdit, QLabel
-from PyQt5.QtGui import QIcon
-from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtWidgets import *
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
 
 
 class App(QWidget):
@@ -26,6 +26,14 @@ class App(QWidget):
         button = CustomLabel('Drop here.', self)
         button.move(130, 15)
 
+        self.splitterH = QSplitter(Qt.Horizontal)
+        self.splitterH.addWidget(editBox)
+        self.splitterH.addWidget(button)
+        self.layout = QHBoxLayout()
+        self.layout.addWidget(self.splitterH)
+        self.setLayout(self.layout)
+        self.splitterH.setAcceptDrops(True)
+
         self.show()
 
     @pyqtSlot()
@@ -37,6 +45,7 @@ class CustomLabel(QLabel):
     def __init__(self, title, parent):
         super().__init__(title, parent)
         self.setAcceptDrops(True)
+        self.parent = parent
 
     def dragEnterEvent(self, e):
         if e.mimeData().hasFormat('text/plain'):
@@ -46,7 +55,8 @@ class CustomLabel(QLabel):
 
     def dropEvent(self, e):
         self.setText(e.mimeData().text())
-
+        newBtn = QPushButton(e.mimeData().text())
+        self.parent.splitterH.insertWidget(0, newBtn)
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
