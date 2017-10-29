@@ -11,8 +11,8 @@ class BtnManger:
 
     def addBtn(self, text):
         btn = MyPushButton(text, len(self.mylist))
-        btn.setMouseTracking(True)
-        btn.setAcceptDrops(True)
+        #btn.setMouseTracking(True)
+        #btn.setAcceptDrops(True)
         self.mylist.append(btn)
         return btn
 
@@ -29,8 +29,19 @@ class MyPushButton(QPushButton):
         self.setMouseTracking(True)
         self.setAcceptDrops(True)
 
-    def mouseMoveEvent(self, e):
+        self.mouse_pos = QPoint()
 
+    def enterEvent(self, event):
+        print("Mouse Entered")
+        return super(MyPushButton, self).enterEvent(event)
+
+    def leaveEvent(self, event):
+        print("Mouse Left")
+        return super(MyPushButton, self).enterEvent(event)
+
+    def mouseMoveEvent(self, e):
+        self.mouse_pos = e.pos()
+        #print(e.pos())
         if e.buttons() != Qt.RightButton:
             return
 
@@ -42,6 +53,33 @@ class MyPushButton(QPushButton):
 
         dropAction = drag.exec_(Qt.MoveAction)
 
+    def dragMoveEvent(self, event):
+        self.mouse_pos = event.pos()
+
+    def dropEvent(self, e):
+        wgt_under = qApp.widgetAt(QCursor.pos())
+        self.mouse_pos = e.pos()
+
+        if isinstance(wgt_under, MyPushButton):
+            w = int(wgt_under.width() / 3)
+            h = int(wgt_under.height() / 3)
+            print(w,',',h,',', wgt_under.mouse_pos)
+            if wgt_under.mouse_pos.y() < h:
+                print('upper insert')
+            elif wgt_under.mouse_pos.y() > h * 2:
+                print('bottom insert')
+
+        aaa = QSplitter(Qt.Vertical)
+        aaa.replace
+
+
+    def dragEnterEvent(self, e):
+        if e.mimeData().hasFormat('text/plain'):
+            e.accept()
+        else:
+            e.ignore()
+
+
 
 class MyWidget(QWidget):
     def __init__(self, parent=None):
@@ -49,7 +87,7 @@ class MyWidget(QWidget):
         self.setAcceptDrops(True)
         self.setMouseTracking(True)
 
-
+        self.init = True
         self.buttonMgr = BtnManger()
 
         self.topbox = QVBoxLayout()
@@ -89,27 +127,42 @@ class MyWidget(QWidget):
     def dragMoveEvent(self, event):
         self.wgt_under_cursor = qApp.widgetAt(QCursor.pos())
         self.mouse_position = event.pos()
-        if isinstance(self.wgt_under_cursor, MyPushButton):
-            print(self.wgt_under_cursor.id)
+        #if isinstance(self.wgt_under_cursor, MyPushButton):
+        #    print(self.wgt_under_cursor.id)
         #print(self.wgt_under_cursor)
 
     def dropEvent(self, e):
-        wgt_under = self.wgt_under_cursor
+        wgt_under = qApp.widgetAt(QCursor.pos())
+
+
+
+
+
+
         self.b = self.buttonMgr.addBtn(e.mimeData().text())
         if isinstance(wgt_under, MyPushButton):
+            w = int(wgt_under.width() / 3)
+            h = int(wgt_under.height() / 3)
+            print(w,',',h,',', wgt_under.mouse_pos)
+            if wgt_under.mouse_pos.y() < h:
+                print('upper insert')
+            elif wgt_under.mouse_pos.y() > h * 2:
+                print('bottom insert')
+
             print('inserting at ', wgt_under.id)
             #self.splitterH.insertWidget(wgt_under.id, self.b)  # always left
             self.splitterV.insertWidget(wgt_under.id, self.b)  # always left
-        else:
+        elif self.init:
             print('inserting at 0')
             #self.splitterH.insertWidget(0, self.b)  # always left
             self.splitterV.insertWidget(0, self.b)  # always left
+            self.init = False
 
         self.buttonMgr.reorder_widgets(self.splitterV)
 
     def mouseMoveEvent(self, event):
         self.wgt_under_cursor = qApp.widgetAt(QCursor.pos())
-        print(self.wgt_under_cursor)
+        #print(self.wgt_under_cursor)
         #print('cursor at ', event.pos())
         if isinstance(self.wgt_under_cursor , MyPushButton):
             print(self.wgt_under_cursor.id, ',', self.wgt_under_cursor.width(), ',', self.wgt_under_cursor.height())
